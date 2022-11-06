@@ -1,0 +1,25 @@
+AES encryption for a compressed repository of sensitive data.
+
+
+The idea is to have two symmetric scripts that will encrypt and decrypt a git repo containing
+sensitive data. The data should not be stored on disk so it will be presented in the /tmp/bluejay/se
+directory.
+
+
+bluejay_lock:
+-------------
+This script takes the sensitive git repo (SecureElement) as input. It then compresses and
+encrypts the repo using a user provided AES key. The path to the SecureElement can be provided as
+input or the script will look in /tmp/bluejay/se by default. If the encryption is successful the
+script should provide the name of the encrypted file in the current directory as well as make sure
+to delete the input sensitive data. The format of the encrypted file is
+`bluejay-$(date +%FT%T).se` in the current working directory.
+
+
+bluejay_unlock:
+---------------
+This script looks for a SecureElement encrypted file. It can be provided as an input by the
+user. If not provided the script looks for a file with the `.se` extension. If multiple such files
+exist, the most recently created is used. The script then decrypts and decompresses the data and
+provides it for viewing in the /tmp/bluejay/se directory as a git repo.
+
