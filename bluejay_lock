@@ -4,6 +4,12 @@ import os
 import argparse
 import tarfile
 
+class BluejayVault:
+    """The vault class."""
+
+    def __init__():
+        _vault_path = f""
+
 """
 The BluejaySecureElement is a git repo of sensitive data that is either specified by the user or
 found in the /tmp/bluejay/se directory.
