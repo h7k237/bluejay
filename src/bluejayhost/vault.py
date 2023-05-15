@@ -7,42 +7,25 @@ import logging
 logger = logging.getLogger("bluejayhost")
 
 class Vault:
-    def __init__(self):
-        _vault_path = f""
+    def __init__(self, vault_path):
+        self.vault_path = vault_path
+        self.vault_git_head = self._get_vault_git_head()
+        logger.info(f"Got vault git HEAD as {self.vault_git_head}")
 
     def lock(self):
-        asdf
+        logger.info(f"Locking the vault at {self.vault_path}")
+        print(f"Locking the vault at {self.vault_path}!")
 
     def unlock(self):
-        asdf
+        logger.info(f"Unlocking the vault at {self.vault_path}")
+        print(f"unlocking the vault at {self.vault_path}!")
 
-"""
-The BluejaySecureElement is a git repo of sensitive data that is either specified by the user or
-found in the /tmp/bluejay/se directory.
-"""
+    def _get_vault_git_head(self):
+        """Get the HEAD commit from the vault"""
+        if not self.vault_path:
+            return None
 
-class InputNotFoundError(Exception):
-    def __str__(self):
-        return f'Unable to find BluejaySecureElement! Please specify a valid git repo.'
-
-def validate_input():
-    parser = argparse.ArgumentParser(description='Lock the BluejaySecureElement')
-    parser.add_argument('-i', dest='input_path', help='Path to the BluejaySecureElement git repo')
-    args = parser.parse_args()
-    return args.input_path
-
-def find_input():
-    input_path = validate_input()
-
-    if input_path is None:
-        input_path = '/tmp/bluejay/se'
-
-    if not os.path.exists(input_path + '/.git'):
-        raise InputNotFoundError
-    else:
-        print(f"Found BluejaySecureElement at {input_path}. Proceeding...")
-
-    return input_path
+        return f"HEAD"
 
 def compress_path(input_path, output_path):
     with tarfile.open(output_path, "w:gz") as tar:
@@ -52,20 +35,5 @@ def compress_path(input_path, output_path):
 
 def aes_encrypt_file(input_file, output_file):
     # TODO
+    print(f"aes_encrypt_file")
 
-if __name__ == "__main__":
-    try:
-        input_path = find_input()
-
-        if not os.path.exists('/tmp/bluejay'):
-            os.makedirs('/tmp/bluejay')
-
-        compressed_filename = '/tmp/bluejay/se.tgz'
-        encrypted_filename = '/tmp/bluejay/se.enc'
-
-        compress_path(input_path, compressed_filename)
-
-        aes_encrypt_file(compressed_filename, encrypted_filename)
-
-    except Exception as e:
-        print(f'ERROR: {e}')

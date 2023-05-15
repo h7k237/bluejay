@@ -1,6 +1,25 @@
 #!/usr/bin/env python3
 
+import os
 import sys
+import argparse
+import logging
 from bluejayhost import vault
 
-vault.lock(sys.argv)
+logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
+logger = logging.getLogger("bluejayhost")
+
+def run(*args):
+    parser = argparse.ArgumentParser(description="Lock the vault")
+    parser.add_argument("-i", "--input-path",
+                        dest="input_path",
+                        help="Path to the decrypted vault dir",
+                        type=str, default="/tmp/bluejay/vlt")
+    args = parser.parse_args()
+    logger.info(f"Using vault input path as {args.input_path}")
+
+    vlt = vault.Vault(args.input_path)
+    vlt.lock()
+
+if __name__ == "__main__":
+    run(sys.argv)
