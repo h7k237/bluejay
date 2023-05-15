@@ -1,14 +1,20 @@
-#!/usr/bin/env python3
-
+import sys
 import os
 import argparse
 import tarfile
+import logging
 
-class BluejayVault:
-    """The vault class."""
+logger = logging.getLogger("bluejayhost")
 
-    def __init__():
+class Vault:
+    def __init__(self):
         _vault_path = f""
+
+    def lock(self):
+        asdf
+
+    def unlock(self):
+        asdf
 
 """
 The BluejaySecureElement is a git repo of sensitive data that is either specified by the user or

@@ -1,0 +1,6 @@
+#!/usr/bin/env python3
+
+import sys
+from bluejayhost import vault
+
+vault.lock(sys.argv)
