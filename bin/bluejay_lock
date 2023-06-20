@@ -6,7 +6,7 @@ import argparse
 import logging
 from bluejayhost import vault
 
-logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
+logging.basicConfig(level=os.environ.get("LOGLEVEL", "DEBUG"))
 logger = logging.getLogger("bluejayhost")
 
 def run(*args):
