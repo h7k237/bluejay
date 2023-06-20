@@ -1,6 +1,6 @@
 # bluejayhost
 
-Management functionality for an encrypted git repo
+Management functionality for an encrypted git repo.
 
 Two scripts encrypt and decrypt a git repo containing sensitive data (known as
 the vault). Unencrypted data should not be stored on disk so it is presented at
@@ -8,7 +8,7 @@ the vault). Unencrypted data should not be stored on disk so it is presented at
 
 During encryption the contents of `/tmp/bluejay/vlt` are compressed and
 encrypted. For decryption the vault file is decrypted, uncompressed and
-and presented at `/tmp/bluejay/vlt`.
+presented at `/tmp/bluejay/vlt`.
 
 ## bluejay_lock
 
