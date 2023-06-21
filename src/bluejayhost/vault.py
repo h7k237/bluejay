@@ -12,24 +12,25 @@ from . import crypto
 logger = logging.getLogger("bluejayhost")
 
 class Vault:
+    _TOP_DIR = "/tmp/bluejay"
+    _TEMP_DIR = _TOP_DIR + "/.temp"
+    _DATETIME_FMT = "%Y%m%dT%H%M%S"
+
     def __init__(self, vault_path):
-        self._TOP_DIR = "/tmp/bluejay"
-        self._TEMP_DIR = self._TOP_DIR + "/.temp"
-        os.makedirs(self._TEMP_DIR, exist_ok=True)
-        self._DATETIME_FMT = "%Y%m%dT%H%M%S"
+        os.makedirs(Vault._TEMP_DIR, exist_ok=True)
 
         self.path = vault_path
         self.git_repo = git.GitRepo(vault_path)
-        self.timestamp = datetime.now().strftime(self._DATETIME_FMT)
+        self.timestamp = datetime.now().strftime(Vault._DATETIME_FMT)
         self.compressed_path = None
         self.encrypted_path = None
 
     """
     def __del__(self):
         try:
-            shutil.rmtree(self._TEMP_DIR)
+            shutil.rmtree(Vault._TEMP_DIR)
         except Exception as exc:
-            logger.error(f"Removing: {self._TEMP_DIR} encountered exception: {exc}")
+            logger.error(f"Removing: {Vault._TEMP_DIR} encountered exception: {exc}")
     """
 
     def _validate_vault_dir(self) -> bool:
@@ -57,8 +58,8 @@ class Vault:
         if not self._validate_vault_dir():
             return
 
-        if not os.path.isdir(self._TEMP_DIR):
-            logger.error(f"Temp directory at: {self._TEMP_DIR} does not exist")
+        if not os.path.isdir(Vault._TEMP_DIR):
+            logger.error(f"Temp directory at: {Vault._TEMP_DIR} does not exist")
             return
 
         self.git_head = self.git_repo.get_head()
@@ -66,8 +67,8 @@ class Vault:
             logger.error(f"Unable to get git head commit")
             return
 
-        self.compressed_path = f"{self._TEMP_DIR}/{self.git_head}_{self.timestamp}.tar.gz"
-        self.encrypted_path = f"{self._TEMP_DIR}/{self.git_head}_{self.timestamp}.enc"
+        self.compressed_path = f"{Vault._TEMP_DIR}/{self.git_head}_{self.timestamp}.tar.gz"
+        self.encrypted_path = f"{Vault._TEMP_DIR}/{self.git_head}_{self.timestamp}.enc"
 
         logger.debug(f"Compressing the vault")
         if not self._compress(self.path, self.compressed_path):
