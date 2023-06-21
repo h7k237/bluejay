@@ -2,6 +2,7 @@ import sys
 import os
 import logging
 
+from getpass import getpass
 from hashlib import pbkdf2_hmac
 #import cryptography.fernet
 
@@ -32,8 +33,8 @@ class Encrypt:
         retries = Encrypt._PWD_RETRIES
 
         while retries > 0:
-            pwd = input("Enter encryption password:")
-            pwd_ver = input("Verify encryption password:")
+            pwd = getpass("Enter encryption password:")
+            pwd_ver = getpass("Verify encryption password:")
 
             if pwd == pwd_ver:
                 break
