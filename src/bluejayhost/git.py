@@ -4,10 +4,13 @@ import logging
 
 logger = logging.getLogger("bluejayhost")
 
-def get_git_head(repo_path):
-    """Get the HEAD commit from a git repo"""
-    if repo_path is None:
-        logger.error(f"Input repo path is not set")
-        return None
+class GitRepo:
+    def __init__(self, input_path):
+        self.path = input_path
 
-    return f"HEAD"
+    def get_head(self):
+        if self.path is None:
+            logger.error(f"Repo path is not set")
+            return None
+
+        return f"HEAD"
