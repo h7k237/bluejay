@@ -1,29 +1,20 @@
 # bluejayhost
 
-Management functionality for an encrypted git repo.
+Manage an encrypted git repo with ease!
 
-Two scripts encrypt and decrypt a git repo containing sensitive data (known as
-the vault). Unencrypted data should not be stored on disk so it is presented at
-`/tmp/bluejay/vlt`.
-
-During encryption the contents of `/tmp/bluejay/vlt` are compressed and
-encrypted. For decryption the vault file is decrypted, uncompressed and
-presented at `/tmp/bluejay/vlt`.
+During encryption the contents of a sensitive git repo are compressed and
+encrypted. For decryption the encrypted file is decrypted, uncompressed and
+presented at a user specified path.
 
 ## bluejay_lock
 
-This script takes the sensitive git repo vault as input. It then compresses and
-encrypts the repo using a user provided AES key. The path to the vault can be
-provided on the CLI or the script will look in `/tmp/bluejay/vlt` by default. If
-the encryption is successful the script provides the name of the encrypted file.
-The user can then delete the input sensitive data. The format of the encrypted
-file is `bluejay-$(date +%FT%T).enc`.
+This script takes the git repo vault path as input. It then compresses and
+encrypts the repo by deriving a key from a user provided password. The Fernet
+cryptographic primitive is used for AES-128 bit encryption. Large files are
+encrypted in chunks.
 
 ## bluejay_unlock
 
-This script looks for an encrypted vault file. It can be provided on the CLI by
-the user. If not provided the script looks for a file with the `.enc` extension
-in the current directory. If multiple such files exist, the most recently
-created is used. The script then decrypts and decompresses the data and provides
-it in the `/tmp/bluejay/vlt` directory as a git repo. If the vault directory
-already exists it exits with an error.
+This script takes the encrypted vault file path as input. The script then
+decrypts and uncompresses the data and provides it at a user specified path as a
+git repo.

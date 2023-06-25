@@ -4,30 +4,21 @@ import logging
 
 from getpass import getpass
 from hashlib import pbkdf2_hmac
-#import cryptography.fernet
+import base64
 
 # https://stackoverflow.com/questions/69312922/how-to-encrypt-large-file-using-python/71068357#71068357
 # https://developers.google.com/tink/encrypt-large-files-or-data-streams
+import struct
+from cryptography.fernet import Fernet
 
 logger = logging.getLogger("bluejayhost")
 
-class Encrypt:
+class Crypto:
     _PWD_RETRIES = 3
-    # Random 16 byte salt
-    _PBKDF2_SALT = b"\x1c\xc5y{\xe1uUu\xa2\xde\xa1\x1a\x07\xa6\xf8'"
-    _PBKDF2_ITERS = 500_000
+    _PWD_MAX_LEN = 1024
 
-    def __init__(self, input_path):
-        self.path = input_path
-        self.success = False
+    def __init__(self):
         self.derived_key = None
-
-    def _validate_input_file(self) -> bool:
-        if self.path is None or not os.path.isfile(self.path):
-            logger.error(f"Input at: {self.path} does not exist or is invalid")
-            return False
-
-        return True
 
     def _derive_key(self) -> bool:
         retries = Encrypt._PWD_RETRIES
@@ -36,19 +27,75 @@ class Encrypt:
             pwd = getpass("Enter encryption password:")
             pwd_ver = getpass("Verify encryption password:")
 
-            if pwd == pwd_ver:
+            if (pwd == pwd_ver and
+                    len(pwd) > 0 and
+                    len(pwd) < Encrypt._PWD_MAX_LEN):
                 break
 
-            logger.error("Passwords don't match")
+            if len(pwd) == 0:
+                logger.error("Password can't be empty")
+            elif len(pwd) >= Encrypt._PWD_MAX_LEN:
+                logger.error(f"Password can't be longer than {Encrypt._PWD_MAX_LEN} chars")
+            else:
+                logger.error("Passwords don't match")
             retries -= 1
 
         if retries == 0:
             logger.error("Failed to get encryption key")
             return False
 
-        self.derived_key = pbkdf2_hmac('sha256', pwd.encode(),
-                                       Encrypt._PBKDF2_SALT, Encrypt._PBKDF2_ITERS)
+        dk_bytes = pbkdf2_hmac(
+            'sha256', pwd.encode(),
+            Encrypt._PBKDF2_SALT, Encrypt._PBKDF2_ITERS,
+            dklen=Encrypt._PBKDF2_DKLEN)
+
+        self.derived_key = base64.urlsafe_b64encode(dk_bytes)
         logger.debug(f"Derived key: {self.derived_key}")
+
+        return True
+
+class Encrypt(Crypto):
+    # Random 16 byte salt
+    _PBKDF2_SALT = b"\x1c\xc5y{\xe1uUu\xa2\xde\xa1\x1a\x07\xa6\xf8'"
+    _PBKDF2_ITERS = 500_000
+    _PBKDF2_DKLEN = 32
+
+    _CHUNK_LEN = (1 << 16) # 64KB
+
+    def __init__(self, input_path):
+        super().__init__()
+        self.path = input_path
+
+    def _validate_input_file(self) -> bool:
+        if self.path is None or not os.path.isfile(self.path):
+            logger.error(f"Input at: {self.path} does not exist or is invalid")
+            return False
+
+        return True
+
+    def _encrypt(self, output_path) -> bool:
+        fernet = Fernet(self.derived_key)
+
+        with open(self.path, 'rb') as fi, open(output_path, 'wb') as fo:
+            for chunk in iter(lambda: fi.read(Encrypt._CHUNK_LEN), b''):
+                enc = fernet.encrypt(chunk)
+                fo.write(struct.pack('<I', len(enc)))
+                fo.write(enc)
+
+        return True
+
+    def _decrypt(self, input_path, output_path) -> bool:
+        fernet = Fernet(self.derived_key)
+
+        with open(input_path, 'rb') as fi, open(output_path, 'wb') as fo:
+            while True:
+                enc_size_data = fi.read(4)
+                if enc_size_data == b'':
+                    break
+                enc_size = struct.unpack('<I', enc_size_data)[0]
+                chunk = fi.read(enc_size)
+                dec = fernet.decrypt(chunk)
+                fo.write(dec)
 
         return True
 
@@ -59,5 +106,13 @@ class Encrypt:
         if not self._derive_key():
             return False
 
+        if not self._encrypt(output_path):
+            return False
+
         logger.debug(f"Successfully created encrypted file at: {output_path}")
+
+        logger.debug(f"Decrypting file for testing")
+        if not self._decrypt(output_path, "./test.tar.gz"):
+            logger.error("Failed to decrypt")
+
         return True

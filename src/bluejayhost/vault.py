@@ -16,22 +16,25 @@ class Vault:
     _TEMP_DIR = _TOP_DIR + "/.temp"
     _DATETIME_FMT = "%Y%m%dT%H%M%S"
 
-    def __init__(self, vault_path):
+    def __init__(self):
         os.makedirs(Vault._TEMP_DIR, exist_ok=True)
-
-        self.path = vault_path
-        self.git_repo = git.GitRepo(vault_path)
         self.timestamp = datetime.now().strftime(Vault._DATETIME_FMT)
-        self.compressed_path = None
-        self.encrypted_path = None
 
-    """
     def __del__(self):
         try:
             shutil.rmtree(Vault._TEMP_DIR)
         except Exception as exc:
             logger.error(f"Removing: {Vault._TEMP_DIR} encountered exception: {exc}")
-    """
+
+class VaultLock(Vault):
+    def __init__(self, vault_path):
+        super().__init__()
+
+        self.path = vault_path
+        self.git_repo = git.GitRepo(vault_path)
+        self.compressed_path = None
+        self.encrypted_path = None
+        self.output_path = None
 
     def _validate_vault_dir(self) -> bool:
         if self.path is None:
@@ -64,24 +67,23 @@ class Vault:
 
         self.git_head = self.git_repo.get_head()
         if self.git_head is None:
-            logger.error(f"Unable to get git head commit")
+            logger.error("Unable to get git head commit")
             return
 
         self.compressed_path = f"{Vault._TEMP_DIR}/{self.git_head}_{self.timestamp}.tar.gz"
         self.encrypted_path = f"{Vault._TEMP_DIR}/{self.git_head}_{self.timestamp}.enc"
 
-        logger.debug(f"Compressing the vault")
+        logger.debug("Compressing the vault")
         if not self._compress(self.path, self.compressed_path):
             return
 
-        logger.debug(f"Encrypting the vault")
+        logger.debug("Encrypting the vault")
         if not self._encrypt(self.compressed_path, self.encrypted_path):
             return
 
-    def unlock(self):
-        if not self._validate_vault_dir():
-            return
+        logger.debug("Encryption successful")
 
-        logger.debug(f"Unlocking the vault at {self.path}")
+        self.output_path = f"/tmp/{os.path.basename(self.encrypted_path)}"
+        shutil.copyfile(self.encrypted_path, self.output_path)
 
-
+        print(f"Output file: {self.output_path}")

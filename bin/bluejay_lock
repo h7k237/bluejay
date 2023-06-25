@@ -6,7 +6,7 @@ import argparse
 import logging
 from bluejayhost import vault
 
-logging.basicConfig(level=os.environ.get("LOGLEVEL", "DEBUG"))
+logging.basicConfig(level=os.environ.get("LOGLEVEL", "ERROR"))
 logger = logging.getLogger("bluejayhost")
 
 def run(*args):
@@ -16,9 +16,9 @@ def run(*args):
                         help="Path to the decrypted vault dir",
                         type=str, default="/tmp/bluejay/vlt")
     args = parser.parse_args()
-    logger.info(f"Using vault input path as {args.input_path}")
+    logger.debug(f"Using vault input path as {args.input_path}")
 
-    vlt = vault.Vault(args.input_path)
+    vlt = vault.VaultLock(args.input_path)
     vlt.lock()
 
 if __name__ == "__main__":
