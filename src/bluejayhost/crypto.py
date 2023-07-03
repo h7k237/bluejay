@@ -16,8 +16,8 @@ logger = logging.getLogger("bluejayhost")
 class Crypto:
     _PWD_RETRIES = 3
     _PWD_MAX_LEN = 1024
-    _PBKDF2_SALT = b"bluejayhostbadsalt"
-    _PBKDF2_ITERS = 500_000
+    _PBKDF2_SALT = b'bluejayhostbadsaltedinit' # 24 bytes with ASCII encoding
+    _PBKDF2_ITERS = 40_000
     _PBKDF2_DKLEN = 32
     _CHUNK_LEN = (1 << 16) # 64KB
 
