@@ -1,0 +1,38 @@
+#!/usr/bin/env python3
+
+import os
+import sys
+import argparse
+import logging
+from bluejayhost import vault
+
+logging.basicConfig(level=os.environ.get("LOGLEVEL", "DEBUG"))
+logger = logging.getLogger("bluejayhost")
+
+def run(*args):
+    parser = argparse.ArgumentParser(description="Unlock the vault")
+    parser.add_argument("-i", "--input-path",
+                        dest="input_path",
+                        help="Path to the input revision file or vault directory",
+                        type=str,
+                        required=True)
+    parser.add_argument("-o", "--output_path",
+                        dest="git_repo_path",
+                        help="Path to the output git repo",
+                        type=str,
+                        default="/tmp/bluejay/vlt")
+    args = parser.parse_args()
+    logger.debug(f"Input path: {args.input_path}")
+    logger.debug(f"Output git repo: {args.git_repo_path}")
+
+    vlt = vault.VaultUnlock(
+        os.path.abspath(args.input_path),
+        os.path.abspath(args.git_repo_path))
+
+    if not vlt.unlock():
+        print("Failed to unlock the input vault")
+    else:
+        print("Successfully unlocked the input vault")
+
+if __name__ == "__main__":
+    run(sys.argv)

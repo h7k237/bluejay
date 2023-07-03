@@ -16,6 +16,10 @@ logger = logging.getLogger("bluejayhost")
 class Crypto:
     _PWD_RETRIES = 3
     _PWD_MAX_LEN = 1024
+    _PBKDF2_SALT = b"bluejayhostbadsalt"
+    _PBKDF2_ITERS = 500_000
+    _PBKDF2_DKLEN = 32
+    _CHUNK_LEN = (1 << 16) # 64KB
 
     def __init__(self):
         self.derived_key = None
@@ -46,8 +50,8 @@ class Crypto:
 
         dk_bytes = pbkdf2_hmac(
             'sha256', pwd.encode(),
-            Encrypt._PBKDF2_SALT, Encrypt._PBKDF2_ITERS,
-            dklen=Encrypt._PBKDF2_DKLEN)
+            Crypto._PBKDF2_SALT, Crypto._PBKDF2_ITERS,
+            dklen=Crypto._PBKDF2_DKLEN)
 
         self.derived_key = base64.urlsafe_b64encode(dk_bytes)
         logger.debug(f"Derived key: {self.derived_key}")
@@ -55,20 +59,13 @@ class Crypto:
         return True
 
 class Encrypt(Crypto):
-    # Random 16 byte salt
-    _PBKDF2_SALT = b"\x1c\xc5y{\xe1uUu\xa2\xde\xa1\x1a\x07\xa6\xf8'"
-    _PBKDF2_ITERS = 500_000
-    _PBKDF2_DKLEN = 32
-
-    _CHUNK_LEN = (1 << 16) # 64KB
-
     def __init__(self, input_path):
         super().__init__()
         self.path = input_path
 
     def _validate_input_file(self) -> bool:
         if self.path is None or not os.path.isfile(self.path):
-            logger.error(f"Input at: {self.path} does not exist or is invalid")
+            logger.error(f"Encrypt: Input at: {self.path} does not exist or is invalid")
             return False
 
         return True
@@ -77,7 +74,7 @@ class Encrypt(Crypto):
         fernet = Fernet(self.derived_key)
 
         with open(self.path, 'rb') as fi, open(output_path, 'wb') as fo:
-            for chunk in iter(lambda: fi.read(Encrypt._CHUNK_LEN), b''):
+            for chunk in iter(lambda: fi.read(Crypto._CHUNK_LEN), b''):
                 enc = fernet.encrypt(chunk)
                 fo.write(struct.pack('<I', len(enc)))
                 fo.write(enc)
@@ -114,5 +111,46 @@ class Encrypt(Crypto):
         logger.debug(f"Decrypting file for testing")
         if not self._decrypt(output_path, "./test.tar.gz"):
             logger.error("Failed to decrypt")
+
+        return True
+
+class Decrypt(Crypto):
+    def __init__(self, input_path):
+        super().__init__()
+        self.path = input_path
+
+    def _validate_input_file(self) -> bool:
+        if self.path is None or not os.path.isfile(self.path):
+            logger.error(f"Decrypt: Input at: {self.path} does not exist or is invalid")
+            return False
+
+        return True
+
+    def _decrypt(self, output_path) -> bool:
+        fernet = Fernet(self.derived_key)
+
+        with open(self.path, 'rb') as fi, open(output_path, 'wb') as fo:
+            while True:
+                enc_size_data = fi.read(4)
+                if enc_size_data == b'':
+                    break
+                enc_size = struct.unpack('<I', enc_size_data)[0]
+                chunk = fi.read(enc_size)
+                dec = fernet.decrypt(chunk)
+                fo.write(dec)
+
+        return True
+
+    def execute(self, output_path) -> bool:
+        if not self._validate_input_file():
+            return False
+
+        if not self._derive_key():
+            return False
+
+        if not self._decrypt(output_path):
+            return False
+
+        logger.debug(f"Successfully created decrypted file at: {output_path}")
 
         return True

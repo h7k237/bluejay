@@ -13,12 +13,12 @@ def run(*args):
     parser = argparse.ArgumentParser(description="Lock the vault")
     parser.add_argument("-i", "--input-path",
                         dest="input_path",
-                        help="Path to the input repository",
+                        help="Path to the input git repo",
                         type=str,
                         default="/tmp/bluejay/vlt")
     parser.add_argument("-v", "--vault",
                         dest="vault_path",
-                        help="Path to the output vault directory",
+                        help="Path to an output vault directory",
                         type=str,
                         required=True)
     args = parser.parse_args()
