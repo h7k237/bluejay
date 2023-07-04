@@ -75,7 +75,12 @@ class Encrypt(Crypto):
 
         with open(self.path, 'rb') as fi, open(output_path, 'wb') as fo:
             for chunk in iter(lambda: fi.read(Crypto._CHUNK_LEN), b''):
-                enc = fernet.encrypt(chunk)
+                try:
+                    enc = fernet.encrypt(chunk)
+                except Exception as exc:
+                    logger.error(f'fernet.encrypt encountered exception: {repr(exc)}')
+                    return False
+
                 fo.write(struct.pack('<I', len(enc)))
                 fo.write(enc)
 
@@ -136,7 +141,12 @@ class Decrypt(Crypto):
                     break
                 enc_size = struct.unpack('<I', enc_size_data)[0]
                 chunk = fi.read(enc_size)
-                dec = fernet.decrypt(chunk)
+                try:
+                    dec = fernet.decrypt(chunk)
+                except Exception as exc:
+                    logger.error(f'fernet.decrypt encountered exception: {repr(exc)}')
+                    return False
+
                 fo.write(dec)
 
         return True

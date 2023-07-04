@@ -25,7 +25,7 @@ class Vault:
         try:
             shutil.rmtree(Vault._TEMP_DIR)
         except Exception as exc:
-            logger.error(f"Removing: {Vault._TEMP_DIR} encountered exception: {exc}")
+            logger.error(f'Removing: {Vault._TEMP_DIR} encountered exception: {repr(exc)}')
 
 class VaultLock(Vault):
     def __init__(self, input_path, vault_path):
@@ -89,14 +89,19 @@ class VaultLock(Vault):
             return False
 
         self.compressed_file = file.CompressedFile(Vault._TEMP_DIR, self.git_head, self.timestamp)
-        self.encrypted_file = file.RevisionFile(Vault._TEMP_DIR, self.git_head, self.timestamp)
-
         compressed_path = self.compressed_file.path()
+        if not compressed_path:
+            return False
+
         logger.debug(f"Compressing the vault into: {compressed_path}")
         if not self._compress(self.path, compressed_path):
             return False
 
+        self.encrypted_file = file.RevisionFile(Vault._TEMP_DIR, self.git_head, self.timestamp)
         encrypted_path = self.encrypted_file.path()
+        if not encrypted_path:
+            return False
+
         logger.debug(f"Encrypting the vault into: {encrypted_path}")
         if not self._encrypt(compressed_path, encrypted_path):
             return False
@@ -123,6 +128,7 @@ class VaultUnlock(Vault):
         self.vault_path = None
         self.compressed_file = None
         self.encrypted_file = None
+        self.encrypted_path = None
         self.uncompressed_path = None
         self.decrypted_path = None
         self.output_path = None
@@ -131,15 +137,17 @@ class VaultUnlock(Vault):
         if not os.path.isdir(self.vault_path):
             return
 
-        rev_file_paths = os.listdir(self.vault_path)
-        rev_file_paths = [f'{self.vault_path}/{file}' for file in rev_file_paths]
-        rev_file_paths = [file for file in rev_file_paths if os.path.isfile(file)]
-        if len(rev_file_paths) == 0:
-            logger.error("No revision files in vault directory")
-            return
+        rev_file_objs = []
+        for path, dirs, files in os.walk(self.vault_path):
+            for f in files:
+                fpath = os.path.join(path, f)
+                if not os.path.isfile(fpath):
+                    continue
 
-        rev_file_objs = [file.RevisionFile(path) for path in rev_file_paths]
-        rev_file_objs = [obj for obj in rev_file_objs if obj.valid()]
+                rev_file_obj = file.RevisionFile(fpath)
+                if rev_file_obj.valid():
+                    rev_file_objs.append(rev_file_obj)
+
         if len(rev_file_objs) == 0:
             logger.error("No valid revision files in vault directory")
             return
@@ -180,6 +188,8 @@ class VaultUnlock(Vault):
             logger.error("Error initializing input revision file")
             return False
 
+        self.encrypted_path = self.encrypted_file.path()
+
         return True
 
     def _uncompress(self, input_path, output_path) -> bool:
@@ -196,24 +206,22 @@ class VaultUnlock(Vault):
         if not self._validate_input():
             return False
 
-        """
-        self.compressed_path = f"{Vault._TEMP_DIR}/{self.git_head}_{self.timestamp}.tar.gz"
-        self.encrypted_path = f"{Vault._TEMP_DIR}/{self.git_head}_{self.timestamp}.rev"
-
-        logger.debug("Compressing the vault")
-        if not self._compress(self.path, self.compressed_path):
+        self.compressed_file = file.CompressedFile(
+            Vault._TEMP_DIR,
+            self.encrypted_file.git_head,
+            self.encrypted_file.timestamp)
+        compressed_path = self.compressed_file.path()
+        if not compressed_path:
             return False
 
-        logger.debug("Encrypting the vault")
-        if not self._encrypt(self.compressed_path, self.encrypted_path):
+        logger.debug(f"Decrypting the revision file into: {compressed_path}")
+        if not self._decrypt(self.encrypted_path, compressed_path):
             return False
 
-        logger.debug("Encryption successful")
+        logger.debug(f"Uncompressing the vault into: {self.git_repo_path}")
+        if not self._uncompress(compressed_path, self.git_repo_path):
+            return False
 
-        self.output_path = f"{self.vault_path}/{os.path.basename(self.encrypted_path)}"
-        shutil.copyfile(self.encrypted_path, self.output_path)
-
-        print(f"Output file: {self.output_path}")
-"""
+        print(f"Output git repo: {self.git_repo_path}")
 
         return True

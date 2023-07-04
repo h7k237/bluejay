@@ -20,6 +20,13 @@ class File:
         elif (len(args) == 3):
             self._init_from_args(args[0], args[1], args[2])
 
+    def __repr__(self):
+        return (f'<dir={self.dir},'
+                f'basename={self.basename},'
+                f'git_head={self.git_head},'
+                f'timestamp={self.timestamp},'
+                f'ext={self.ext}>')
+
     def _init_from_path(self, path):
         self.dir = os.path.dirname(path)
         self.basename = os.path.basename(path)
@@ -44,19 +51,19 @@ class File:
 
     def path(self) -> Optional[str]:
         if self.dir is None:
-            logger.error('File directory not set')
+            logger.error(f'File directory not set: {self}')
             return None
 
         if self.basename is None:
             if (self.git_head is None or
                     self.timestamp is None or
                     self.ext is None):
-                logger.error('Required file params not set')
+                logger.error(f'Required file params not set: {self}')
                 return None
 
             self.basename = f'{self.git_head}_{self.timestamp}.{self.ext}'
 
-        return f'{self.dir}/{self.basename}'
+        return os.path.join(self.dir, self.basename)
 
     def valid(self) -> bool:
         path = self.path()
@@ -77,6 +84,9 @@ class CompressedFile(File):
         if self.ext is None:
             self.ext = CompressedFile._COMPRESSED_EXT
 
+    def __repr__(self):
+        return super().__repr__()
+
     def valid(self) -> bool:
         return (super().valid() and
                 self.ext == CompressedFile._COMPRESSED_EXT)
@@ -89,6 +99,9 @@ class RevisionFile(File):
 
         if self.ext is None:
             self.ext = RevisionFile._REVISION_EXT
+
+    def __repr__(self):
+        return super().__repr__()
 
     def valid(self) -> bool:
         return (super().valid() and
