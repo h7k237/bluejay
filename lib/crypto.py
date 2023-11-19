@@ -25,7 +25,7 @@ class Crypto:
         self.derived_key = None
 
     def _derive_key(self) -> bool:
-        retries = Encrypt._PWD_RETRIES
+        retries = Crypto._PWD_RETRIES
 
         while retries > 0:
             pwd = getpass("Enter encryption password:")
@@ -33,13 +33,13 @@ class Crypto:
 
             if (pwd == pwd_ver and
                     len(pwd) > 0 and
-                    len(pwd) < Encrypt._PWD_MAX_LEN):
+                    len(pwd) < Crypto._PWD_MAX_LEN):
                 break
 
             if len(pwd) == 0:
                 logger.error("Password can't be empty")
-            elif len(pwd) >= Encrypt._PWD_MAX_LEN:
-                logger.error(f"Password can't be longer than {Encrypt._PWD_MAX_LEN} chars")
+            elif len(pwd) >= Crypto._PWD_MAX_LEN:
+                logger.error(f"Password can't be longer than {Crypto._PWD_MAX_LEN} chars")
             else:
                 logger.error("Passwords don't match")
             retries -= 1
@@ -64,8 +64,11 @@ class Encrypt(Crypto):
         self.path = input_path
 
     def _validate_input_file(self) -> bool:
-        if self.path is None or not os.path.isfile(self.path):
-            logger.error(f"Encrypt: Input at: {self.path} does not exist or is invalid")
+        if self.path is None:
+            logger.error(f"Encrypt: Input path not set")
+            return False
+        elif not os.path.isfile(self.path):
+            logger.error(f"Encrypt: Input at {self.path} is invalid")
             return False
 
         return True
@@ -86,21 +89,6 @@ class Encrypt(Crypto):
 
         return True
 
-    def _decrypt(self, input_path, output_path) -> bool:
-        fernet = Fernet(self.derived_key)
-
-        with open(input_path, 'rb') as fi, open(output_path, 'wb') as fo:
-            while True:
-                enc_size_data = fi.read(4)
-                if enc_size_data == b'':
-                    break
-                enc_size = struct.unpack('<I', enc_size_data)[0]
-                chunk = fi.read(enc_size)
-                dec = fernet.decrypt(chunk)
-                fo.write(dec)
-
-        return True
-
     def execute(self, output_path) -> bool:
         if not self._validate_input_file():
             return False
@@ -113,10 +101,6 @@ class Encrypt(Crypto):
 
         logger.debug(f"Successfully created encrypted file at: {output_path}")
 
-        logger.debug(f"Decrypting file for testing")
-        if not self._decrypt(output_path, "./test.tar.gz"):
-            logger.error("Failed to decrypt")
-
         return True
 
 class Decrypt(Crypto):
@@ -125,8 +109,11 @@ class Decrypt(Crypto):
         self.path = input_path
 
     def _validate_input_file(self) -> bool:
-        if self.path is None or not os.path.isfile(self.path):
-            logger.error(f"Decrypt: Input at: {self.path} does not exist or is invalid")
+        if self.path is None:
+            logger.error(f"Decrypt: Input path not set")
+            return False
+        elif not os.path.isfile(self.path):
+            logger.error(f"Decrypt: Input at {self.path} is invalid")
             return False
 
         return True
