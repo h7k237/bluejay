@@ -1,0 +1,42 @@
+#!build/venv/bin/python
+
+"""Usage: bluejay [-u] VAULT_PATH [-r REPO_PATH]
+
+    -h --help          Show this message.
+    -r REPO_PATH       Path to the git repo. [default: /tmp/bluejay/vlt].
+    -u --unlock        Unlock the vault into the repo directory.
+    VAULT_PATH         Path to the vault directory (optionally vault revision file if unlocking).
+"""
+
+import os
+import sys
+import logging
+from docopt import docopt
+
+from lib.vault import VaultLock, VaultUnlock
+
+logging.basicConfig(level=os.environ.get("LOGLEVEL", "DEBUG"))
+logger = logging.getLogger("bluejayhost")
+
+if __name__ == "__main__":
+    args = docopt(__doc__)
+    vault_path = os.path.abspath(args["VAULT_PATH"])
+    repo_path = os.path.abspath(args["-r"])
+
+    logger.debug(f"VAULT_PATH: {vault_path}")
+    logger.debug(f"REPO_PATH: {repo_path}")
+
+    if not args["--unlock"]:
+        vlt = VaultLock(repo_path, vault_path)
+
+        if not vlt.lock():
+            print("Failed to lock the input repository")
+        else:
+            print("Successfully locked the input repository")
+    else:
+        vlt = VaultUnlock(vault_path, repo_path)
+
+        if not vlt.unlock():
+            print("Failed to unlock")
+        else:
+            print("Successfully unlocked")

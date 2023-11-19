@@ -1,6 +1,7 @@
 QUIET = @
 
-BUILD_DIR = ./bin/build
+LIB_DIR = ./lib
+BUILD_DIR = ./build
 VENV_DIR = $(BUILD_DIR)/venv
 
 .PHONY: help
@@ -24,3 +25,4 @@ install: requirements.txt
 .PHONY: clean
 clean:
 	$(QUIET)rm -rf $(BUILD_DIR)
+	$(QUIET)rm -rf $(LIB_DIR)/__pycache__
