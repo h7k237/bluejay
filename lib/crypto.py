@@ -24,7 +24,7 @@ class Crypto:
     def __init__(self):
         self.derived_key = None
 
-    def _derive_key(self) -> bool:
+    def _derive_key(self, version) -> bool:
         retries = Crypto._PWD_RETRIES
 
         while retries > 0:
@@ -69,6 +69,8 @@ class Encrypt(Crypto):
         fernet = Fernet(self.derived_key)
 
         with open(input_path, 'rb') as fi, open(output_path, 'wb') as fo:
+            fo.write(file.RevisionFile.get_header()) # Write the header
+
             for chunk in iter(lambda: fi.read(Crypto._CHUNK_LEN), b''):
                 try:
                     enc = fernet.encrypt(chunk)
@@ -82,7 +84,7 @@ class Encrypt(Crypto):
         return True
 
     def execute(self, output_file) -> bool:
-        if not self._derive_key():
+        if not self._derive_key(file.RevisionFile._REV_VERSION_CUR):
             return False
 
         if not self._encrypt(output_file):
@@ -101,6 +103,7 @@ class Decrypt(Crypto):
         fernet = Fernet(self.derived_key)
 
         with open(input_path, 'rb') as fi, open(output_path, 'wb') as fo:
+            fi.read(4) # Skip the header
             while True:
                 enc_size_data = fi.read(4)
                 if enc_size_data == b'':
@@ -118,7 +121,10 @@ class Decrypt(Crypto):
         return True
 
     def execute(self, output_file) -> bool:
-        if not self._derive_key():
+        if not self.input_file.check_header():
+            return False
+
+        if not self._derive_key(self.input_file.get_version()):
             return False
 
         if not self._decrypt(output_file):

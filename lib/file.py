@@ -2,7 +2,7 @@ import sys
 import os
 import shutil
 import logging
-from typing import Optional
+import struct
 
 def validate_path(path) -> bool:
     if path is None:
@@ -42,6 +42,7 @@ class File:
         self.git_head = None
         self.timestamp = None
         self.ext = None
+        self.version = 0x00
 
         if len(args) == 1:
             self._init_from_path(args[0])
@@ -87,11 +88,11 @@ class File:
 
         return os.path.join(self.dir, self.basename)
 
-    """Checks that the file attributes are valid.
-
-    The file may not be created yet.
-    """
     def valid(self) -> bool:
+        """Checks that the file attributes are valid.
+
+        The file may not be created yet.
+        """
         if self.git_head is None:
             logging.error("File git_head is not set")
             return False
@@ -105,6 +106,9 @@ class File:
             return False
 
         return True
+
+    def get_version(self) -> int:
+        return self.version
 
 class CompressedFile(File):
     _COMPRESSED_EXT = 'tar.gz'
@@ -138,6 +142,8 @@ class RevisionFile(File):
     _REV_MAG1 = 0x6A #j
     _REV_MAG2 = 0x72 #r
     _REV_VERSION_CUR = 0x01
+    _REV_VERSION_MAX = 0x01
+    _BYTEMASK = 0x000000FF
 
     def __init__(self, *args):
         super().__init__(*args)
@@ -148,8 +154,36 @@ class RevisionFile(File):
     def __repr__(self):
         return super().__repr__()
 
+    @staticmethod
+    def get_header() -> bytes:
+        header_data = (RevisionFile._REV_MAG0 << 24 |
+                       RevisionFile._REV_MAG1 << 16 |
+                       RevisionFile._REV_MAG2 << 8 |
+                       RevisionFile._REV_VERSION_CUR)
+        return struct.pack('<I', header_data)
+
     def check_header(self) -> bool:
-        # Open the file path and get the header attributes
+        """Returns True if the file is a valid RevisionFile.
+
+        This function also sets the self.version attribute for the RevisionFile.
+        """
+        path = self.path()
+        with open(path, 'rb') as fi:
+            header_bytes = fi.read(4)
+
+        header = struct.unpack('<I', header_bytes)[0]
+
+        if not (((header >> 24) & RevisionFile._BYTEMASK) == RevisionFile._REV_MAG0 and
+                ((header >> 16) & RevisionFile._BYTEMASK) == RevisionFile._REV_MAG1 and
+                ((header >> 8) & RevisionFile._BYTEMASK) == RevisionFile._REV_MAG2):
+            logging.error("Invalid revision file magic.")
+            return False
+
+        self.version = (header & RevisionFile._BYTEMASK)
+        if not (self.version >= 0 and self.version <= RevisionFile._REV_VERSION_MAX):
+            logging.error("Invalid version in revision file.")
+            return False
+
         return True
 
     def valid(self) -> bool:
