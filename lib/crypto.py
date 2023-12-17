@@ -59,14 +59,16 @@ class Crypto:
         return True
 
 class Encrypt(Crypto):
-    def __init__(self, input_path):
+    def __init__(self, input_file):
         super().__init__()
-        self.path = input_path
+        self.input_file = input_file
 
-    def _encrypt(self, output_path) -> bool:
+    def _encrypt(self, output_file) -> bool:
+        input_path = self.input_file.path()
+        output_path = output_file.path()
         fernet = Fernet(self.derived_key)
 
-        with open(self.path, 'rb') as fi, open(output_path, 'wb') as fo:
+        with open(input_path, 'rb') as fi, open(output_path, 'wb') as fo:
             for chunk in iter(lambda: fi.read(Crypto._CHUNK_LEN), b''):
                 try:
                     enc = fernet.encrypt(chunk)
@@ -79,29 +81,26 @@ class Encrypt(Crypto):
 
         return True
 
-    def execute(self, output_path) -> bool:
-        if not file.validate_path_as_file(self.path):
-            return False
-
+    def execute(self, output_file) -> bool:
         if not self._derive_key():
             return False
 
-        if not self._encrypt(output_path):
+        if not self._encrypt(output_file):
             return False
-
-        logging.debug(f"Successfully created encrypted file at: {output_path}")
 
         return True
 
 class Decrypt(Crypto):
-    def __init__(self, input_path):
+    def __init__(self, input_file):
         super().__init__()
-        self.path = input_path
+        self.input_file = input_file
 
-    def _decrypt(self, output_path) -> bool:
+    def _decrypt(self, output_file) -> bool:
+        input_path = self.input_file.path()
+        output_path = output_file.path()
         fernet = Fernet(self.derived_key)
 
-        with open(self.path, 'rb') as fi, open(output_path, 'wb') as fo:
+        with open(input_path, 'rb') as fi, open(output_path, 'wb') as fo:
             while True:
                 enc_size_data = fi.read(4)
                 if enc_size_data == b'':
@@ -118,16 +117,11 @@ class Decrypt(Crypto):
 
         return True
 
-    def execute(self, output_path) -> bool:
-        if not file.validate_path_as_file(self.path):
-            return False
-
+    def execute(self, output_file) -> bool:
         if not self._derive_key():
             return False
 
-        if not self._decrypt(output_path):
+        if not self._decrypt(output_file):
             return False
-
-        logging.debug(f"Successfully created decrypted file at: {output_path}")
 
         return True

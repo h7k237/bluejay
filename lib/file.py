@@ -77,31 +77,34 @@ class File:
         self.git_head = git_head
         self.timestamp = timestamp
 
-    def path(self) -> Optional[str]:
-        if self.dir is None:
-            logging.error(f'File directory not set: {self}')
-            return None
+    def path(self) -> str:
+        """Forms the path from the file attributes.
 
+        Call the valid method before using this function.
+        """
         if self.basename is None:
-            if (self.git_head is None or
-                    self.timestamp is None or
-                    self.ext is None):
-                logging.error(f'Required file params not set: {self}')
-                return None
-
             self.basename = f'{self.git_head}_{self.timestamp}.{self.ext}'
 
         return os.path.join(self.dir, self.basename)
 
+    """Checks that the file attributes are valid.
+
+    The file may not be created yet.
+    """
     def valid(self) -> bool:
-        path = self.path()
-        if path is None:
+        if self.git_head is None:
+            logging.error("File git_head is not set")
             return False
 
-        return (os.path.isfile(path) and
-                self.git_head is not None and
-                self.timestamp is not None and
-                self.ext is not None)
+        if self.timestamp is None:
+            logging.error("File timestamp is not set")
+            return False
+
+        if self.ext is None:
+            logging.error("File extension is not set")
+            return False
+
+        return True
 
 class CompressedFile(File):
     _COMPRESSED_EXT = 'tar.gz'
@@ -116,21 +119,45 @@ class CompressedFile(File):
         return super().__repr__()
 
     def valid(self) -> bool:
-        return (super().valid() and
-                self.ext == CompressedFile._COMPRESSED_EXT)
+        if not super().valid():
+            return False
+
+        if self.ext != CompressedFile._COMPRESSED_EXT:
+            logging.error("Invalid compressed file extension: {self.ext}")
+            return False
+
+        return True
 
 class RevisionFile(File):
-    _REVISION_EXT = 'rev'
+    """Represents a Bluejay revision file.
+
+    The file starts with a 4 byte header consisting of 3 magic bytes and 1 version byte.
+    """
+    _REV_EXT = 'rev'
+    _REV_MAG0 = 0x62 #b
+    _REV_MAG1 = 0x6A #j
+    _REV_MAG2 = 0x72 #r
+    _REV_VERSION_CUR = 0x01
 
     def __init__(self, *args):
         super().__init__(*args)
 
         if self.ext is None:
-            self.ext = RevisionFile._REVISION_EXT
+            self.ext = RevisionFile._REV_EXT
 
     def __repr__(self):
         return super().__repr__()
 
+    def check_header(self) -> bool:
+        # Open the file path and get the header attributes
+        return True
+
     def valid(self) -> bool:
-        return (super().valid() and
-                self.ext == RevisionFile._REVISION_EXT)
+        if not super().valid():
+            return False
+
+        if self.ext != RevisionFile._REV_EXT:
+            logging.error("Invalid revision file extension: {self.ext}")
+            return False
+
+        return True

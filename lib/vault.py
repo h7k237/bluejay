@@ -37,7 +37,6 @@ class VaultLocker(Vault):
 
         self.git_repo = None
         self.git_head = None
-        self.compressed_file = None
         self.encrypted_file = None
 
     def _validate_input(self) -> bool:
@@ -84,28 +83,29 @@ class VaultLocker(Vault):
         if not self._init_git_repo():
             return False
 
-        self.compressed_file = file.CompressedFile(Vault._TEMP_DIR, self.git_head, self.timestamp)
-        compressed_path = self.compressed_file.path()
-        if compressed_path is None:
+        compressed_file = file.CompressedFile(Vault._TEMP_DIR, self.git_head, self.timestamp)
+        if not compressed_file.valid():
             return False
 
+        compressed_path = compressed_file.path()
         logging.debug(f"Compressing the vault into: {compressed_path}")
         if not compress.create_tar_file(self.repo_path, compressed_path):
             return False
 
         self.encrypted_file = file.RevisionFile(Vault._TEMP_DIR, self.git_head, self.timestamp)
+        if not self.encrypted_file.valid():
+            return False
+
         encrypted_path = self.encrypted_file.path()
-        if encrypted_path is None:
-            return False
-
         logging.debug(f"Encrypting the vault into: {encrypted_path}")
-        if not crypto.Encrypt(compressed_path).execute(encrypted_path):
+        if not crypto.Encrypt(compressed_file).execute(self.encrypted_file):
             return False
 
-        output_path = file.RevisionFile(self.vault_path, self.git_head, self.timestamp).path()
-        if output_path is None:
+        output_file = file.RevisionFile(self.vault_path, self.git_head, self.timestamp)
+        if not output_file.valid():
             return False
 
+        output_path = output_file.path()
         logging.debug(f"Copying the encrypted file into: {output_path}")
         shutil.copyfile(encrypted_path, output_path)
 
@@ -119,7 +119,6 @@ class VaultUnlocker(Vault):
 
         self.git_repo = None
         self.git_head = None
-        self.compressed_file = None
         self.encrypted_file = None
 
     def _get_latest_revision(self) -> bool:
@@ -175,6 +174,8 @@ class VaultUnlocker(Vault):
                 return False
         else:
             self.encrypted_file = file.RevisionFile(self.vault_path)
+            if not self.encrypted_file.valid():
+                return False
 
         if self.encrypted_file is None or not self.encrypted_file.valid():
             logging.error("Error initializing input revision file.")
@@ -187,19 +188,15 @@ class VaultUnlocker(Vault):
             return False
 
         encrypted_path = self.encrypted_file.path()
-        if encrypted_path is None:
+
+        compressed_file = file.CompressedFile(Vault._TEMP_DIR, self.encrypted_file.git_head,
+                self.encrypted_file.timestamp)
+        if not compressed_file.valid():
             return False
 
-        self.compressed_file = file.CompressedFile(
-            Vault._TEMP_DIR,
-            self.encrypted_file.git_head,
-            self.encrypted_file.timestamp)
-        compressed_path = self.compressed_file.path()
-        if not compressed_path:
-            return False
-
+        compressed_path = compressed_file.path()
         logging.debug(f"Decrypting the revision file into: {compressed_path}")
-        if not crypto.Decrypt(encrypted_path).execute(compressed_path):
+        if not crypto.Decrypt(self.encrypted_file).execute(compressed_file):
             return False
 
         logging.debug(f"Uncompressing the vault into: {self.repo_path}")
