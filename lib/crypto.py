@@ -13,8 +13,6 @@ import base64
 import struct
 from cryptography.fernet import Fernet
 
-logger = logging.getLogger("bluejayhost")
-
 class Crypto:
     _PWD_RETRIES = 3
     _PWD_MAX_LEN = 1024
@@ -39,15 +37,15 @@ class Crypto:
                 break
 
             if len(pwd) == 0:
-                logger.error("Password can't be empty")
+                logging.error("Password can't be empty")
             elif len(pwd) >= Crypto._PWD_MAX_LEN:
-                logger.error(f"Password can't be longer than {Crypto._PWD_MAX_LEN} chars")
+                logging.error(f"Password can't be longer than {Crypto._PWD_MAX_LEN} chars")
             else:
-                logger.error("Passwords don't match")
+                logging.error("Passwords don't match")
             retries -= 1
 
         if retries == 0:
-            logger.error("Failed to get encryption key")
+            logging.error("Failed to get encryption key")
             return False
 
         dk_bytes = pbkdf2_hmac(
@@ -56,7 +54,7 @@ class Crypto:
             dklen=Crypto._PBKDF2_DKLEN)
 
         self.derived_key = base64.urlsafe_b64encode(dk_bytes)
-        logger.debug(f"Derived key: {self.derived_key}")
+        logging.debug(f"Derived key: {self.derived_key}")
 
         return True
 
@@ -73,7 +71,7 @@ class Encrypt(Crypto):
                 try:
                     enc = fernet.encrypt(chunk)
                 except Exception as exc:
-                    logger.error(f'fernet.encrypt encountered exception: {repr(exc)}')
+                    logging.error(f'fernet.encrypt encountered exception: {repr(exc)}')
                     return False
 
                 fo.write(struct.pack('<I', len(enc)))
@@ -91,7 +89,7 @@ class Encrypt(Crypto):
         if not self._encrypt(output_path):
             return False
 
-        logger.debug(f"Successfully created encrypted file at: {output_path}")
+        logging.debug(f"Successfully created encrypted file at: {output_path}")
 
         return True
 
@@ -113,7 +111,7 @@ class Decrypt(Crypto):
                 try:
                     dec = fernet.decrypt(chunk)
                 except Exception as exc:
-                    logger.error(f'fernet.decrypt encountered exception: {repr(exc)}')
+                    logging.error(f'fernet.decrypt encountered exception: {repr(exc)}')
                     return False
 
                 fo.write(dec)
@@ -130,6 +128,6 @@ class Decrypt(Crypto):
         if not self._decrypt(output_path):
             return False
 
-        logger.debug(f"Successfully created decrypted file at: {output_path}")
+        logging.debug(f"Successfully created decrypted file at: {output_path}")
 
         return True

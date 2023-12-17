@@ -4,14 +4,12 @@ import shutil
 import logging
 from typing import Optional
 
-logger = logging.getLogger("bluejayhost")
-
 def validate_path(path) -> bool:
     if path is None:
-        logger.error("Path {path} is not set")
+        logging.error("Path {path} is not set")
         return False
     elif not os.path.exists(path):
-        logger.error("Path {path} does not exist")
+        logging.error("Path {path} does not exist")
         return False
     return True
 
@@ -19,7 +17,7 @@ def validate_path_as_file(path) -> bool:
     if not validate_path(path):
         return False
     elif not os.path.isfile(path):
-        logger.error("Path {path} is not a regular file")
+        logging.error("Path {path} is not a regular file")
         return False
     return True
 
@@ -27,7 +25,7 @@ def validate_path_as_dir(path) -> bool:
     if not validate_path(path):
         return False
     elif not os.path.isdir(path):
-        logger.error("Path {path} is not a directory")
+        logging.error("Path {path} is not a directory")
         return False
     return True
 
@@ -81,14 +79,14 @@ class File:
 
     def path(self) -> Optional[str]:
         if self.dir is None:
-            logger.error(f'File directory not set: {self}')
+            logging.error(f'File directory not set: {self}')
             return None
 
         if self.basename is None:
             if (self.git_head is None or
                     self.timestamp is None or
                     self.ext is None):
-                logger.error(f'Required file params not set: {self}')
+                logging.error(f'Required file params not set: {self}')
                 return None
 
             self.basename = f'{self.git_head}_{self.timestamp}.{self.ext}'
