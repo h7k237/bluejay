@@ -2,6 +2,8 @@ import sys
 import os
 import logging
 
+from . import file
+
 from getpass import getpass
 from hashlib import pbkdf2_hmac
 import base64
@@ -63,16 +65,6 @@ class Encrypt(Crypto):
         super().__init__()
         self.path = input_path
 
-    def _validate_input_file(self) -> bool:
-        if self.path is None:
-            logger.error(f"Encrypt: Input path not set")
-            return False
-        elif not os.path.isfile(self.path):
-            logger.error(f"Encrypt: Input at {self.path} is invalid")
-            return False
-
-        return True
-
     def _encrypt(self, output_path) -> bool:
         fernet = Fernet(self.derived_key)
 
@@ -90,7 +82,7 @@ class Encrypt(Crypto):
         return True
 
     def execute(self, output_path) -> bool:
-        if not self._validate_input_file():
+        if not file.validate_path_as_file(self.path):
             return False
 
         if not self._derive_key():
@@ -107,16 +99,6 @@ class Decrypt(Crypto):
     def __init__(self, input_path):
         super().__init__()
         self.path = input_path
-
-    def _validate_input_file(self) -> bool:
-        if self.path is None:
-            logger.error(f"Decrypt: Input path not set")
-            return False
-        elif not os.path.isfile(self.path):
-            logger.error(f"Decrypt: Input at {self.path} is invalid")
-            return False
-
-        return True
 
     def _decrypt(self, output_path) -> bool:
         fernet = Fernet(self.derived_key)
@@ -139,7 +121,7 @@ class Decrypt(Crypto):
         return True
 
     def execute(self, output_path) -> bool:
-        if not self._validate_input_file():
+        if not file.validate_path_as_file(self.path):
             return False
 
         if not self._derive_key():
