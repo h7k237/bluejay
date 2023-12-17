@@ -1,16 +1,13 @@
 import sys
 import os
 import logging
-
-logger = logging.getLogger("bluejayhost")
+from typing import Optional
+from git import Repo
 
 class GitRepo:
-    def __init__(self, input_path):
-        self.path = input_path
+    def __init__(self, repo_path):
+        self.repo_path = repo_path
+        self.repo = Repo(repo_path)
 
-    def get_head(self):
-        if self.path is None:
-            logger.error(f"Repo path is not set")
-            return None
-
-        return f"HEAD"
+    def get_head(self) -> Optional[str]:
+        return self.repo.head.object.hexsha

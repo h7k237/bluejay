@@ -71,13 +71,8 @@ class VaultLocker(Vault):
     def _init_git_repo(self) -> bool:
         self.git_repo = git.GitRepo(self.repo_path)
 
-        if self.git_repo is None:
-            logging.error(f"Failed to set git repo object")
-            return False
-
         self.git_head = self.git_repo.get_head()
         if self.git_head is None:
-            logging.error("Failed to get git head commit")
             return False
 
         return True
