@@ -182,12 +182,6 @@ class VaultUnlocker(Vault):
 
         return True
 
-    def _uncompress(self, input_path, output_path) -> bool:
-        return compress.extract_tar_file(input_path, output_path)
-
-    def _decrypt(self, input_path, output_path) -> bool:
-        return crypto.Decrypt(input_path).execute(output_path)
-
     def execute(self) -> bool:
         if not self._validate_input():
             return False
@@ -205,11 +199,11 @@ class VaultUnlocker(Vault):
             return False
 
         logging.debug(f"Decrypting the revision file into: {compressed_path}")
-        if not self._decrypt(encrypted_path, compressed_path):
+        if not crypto.Decrypt(encrypted_path).execute(compressed_path):
             return False
 
         logging.debug(f"Uncompressing the vault into: {self.repo_path}")
-        if not self._uncompress(compressed_path, self.repo_path):
+        if not compress.extract_tar_file(compressed_path, self.repo_path):
             return False
 
         print(f"Output git repo: {self.repo_path}")
